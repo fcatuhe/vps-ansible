@@ -13,7 +13,7 @@
     # healthcheck_url: "https://example.com/up"
   roles:
     - packages
-    - docker
+    # - docker
     - firewall
     - security
     - zram
