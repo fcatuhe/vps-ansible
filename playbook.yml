@@ -1,7 +1,7 @@
 ---
 - name: Provisioning webservers group
   hosts: webservers
-  strategy: free
+  strategy: linear
   vars:
     # Whether to reboot when needed during unattended upgrades.
     security_autoupdate_reboot: "false"

@@ -117,7 +117,7 @@ your.server.ip.address
 ---
 - name: Provisioning webservers group
   hosts: webservers
-  strategy: free
+  strategy: linear
   vars:
     security_autoupdate_reboot: "false"
     security_autoupdate_reboot_time: "03:00"
