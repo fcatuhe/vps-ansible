@@ -1,9 +1,15 @@
 ---
+- name: Ensure zram kernel module is available (Ubuntu)
+  apt:
+    name: "linux-modules-extra-{{ ansible_kernel }}"
+    state: present
+    update_cache: true
+  when: ansible_distribution == "Ubuntu"
+
 - name: Install zram-tools
   apt:
     name: zram-tools
     state: present
-    update_cache: true
 
 - name: Configure zram swap
   copy:
