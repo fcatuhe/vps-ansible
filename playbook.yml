@@ -7,6 +7,8 @@
     security_autoupdate_reboot: "false"
     # The time to trigger a reboot, when needed, if security_autoupdate_reboot is set to true. In 24h "hh:mm" clock format.
     security_autoupdate_reboot_time: "03:00"
+    # Allow HTTP/HTTPS traffic (default: false, SSH only)
+    # firewall_allow_web: true
     # URL to check after reboot (optional, used with encrypted disk reboot)
     # healthcheck_url: "https://example.com/up"
   roles:

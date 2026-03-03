@@ -1,0 +1,3 @@
+---
+# Set to true to allow HTTP (80) and HTTPS (443) traffic
+firewall_allow_web: false

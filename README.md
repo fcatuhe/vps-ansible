@@ -121,6 +121,8 @@ your.server.ip.address
   vars:
     security_autoupdate_reboot: "false"
     security_autoupdate_reboot_time: "03:00"
+    # Allow HTTP/HTTPS traffic (default: false, SSH only)
+    # firewall_allow_web: true
     # Optional: healthcheck URL checked after encrypted reboot
     # healthcheck_url: "https://example.com/up"
   roles:
@@ -147,6 +149,7 @@ ansible-playbook playbook.yml
 |----------|---------|-------------|
 | `security_autoupdate_reboot` | `"false"` | Auto-reboot for security updates |
 | `security_autoupdate_reboot_time` | `"03:00"` | Reboot time if enabled (24h format) |
+| `firewall_allow_web` | `false` | Allow HTTP (80) and HTTPS (443) traffic |
 | `healthcheck_url` | _(undefined)_ | URL to check after encrypted reboot |
 
 ### Encrypted disk (dropbear) support
