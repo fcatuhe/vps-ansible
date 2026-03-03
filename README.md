@@ -163,7 +163,3 @@ The `reboot_if_needed` role automatically detects if dropbear is installed (`/et
 6. Optionally checks `healthcheck_url`
 
 No configuration needed — detection is automatic.
-
-## License
-
-MIT
