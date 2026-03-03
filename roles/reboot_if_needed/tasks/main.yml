@@ -1,0 +1,109 @@
+---
+- name: Check if reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: reboot_required_file
+
+- name: Check if dropbear is installed (encrypted disk)
+  ansible.builtin.stat:
+    path: /etc/dropbear/initramfs
+  register: dropbear_installed
+
+- name: Check if tmpfs flagged a reboot
+  ansible.builtin.set_fact:
+    reboot_needed_by_tmpfs: "{{ reboot_needed | default(false) }}"
+
+- name: Set reboot required
+  ansible.builtin.set_fact:
+    needs_reboot: "{{ reboot_required_file.stat.exists or reboot_needed_by_tmpfs }}"
+
+- name: Simple reboot (no disk encryption)
+  ansible.builtin.reboot:
+  when: needs_reboot and not dropbear_installed.stat.exists
+
+- name: Encrypted reboot (dropbear disk unlock)
+  when: needs_reboot and dropbear_installed.stat.exists
+  block:
+    - name: Prompt for LUKS passphrase
+      ansible.builtin.pause:
+        prompt: "Server requires reboot. Enter LUKS passphrase (or Ctrl+C to abort)"
+        echo: false
+      register: luks_prompt
+
+    - name: Abort if no passphrase provided
+      ansible.builtin.fail:
+        msg: "Aborted - no passphrase provided"
+      when: luks_prompt.user_input | length == 0
+
+    - name: Set initial passphrase
+      ansible.builtin.set_fact:
+        luks_passphrase: "{{ luks_prompt.user_input }}"
+      no_log: true
+
+    - name: Reboot the server
+      ansible.builtin.reboot:
+        reboot_timeout: 0
+      ignore_errors: true
+      ignore_unreachable: true
+
+    - name: Wait for dropbear SSH on port 2222
+      ansible.builtin.wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 2222
+        delay: 5
+        timeout: 120
+        search_regex: SSH
+      delegate_to: localhost
+
+    - name: Unlock encrypted disk with retry
+      block:
+        - name: Attempt to unlock encrypted disk
+          ansible.builtin.shell: |
+            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 root@{{ inventory_hostname }} 'printf "%s" "{{ luks_passphrase }}" | cryptroot-unlock'
+          delegate_to: localhost
+          register: unlock_result
+          no_log: true
+      rescue:
+        - name: Prompt for passphrase again (previous attempt failed)
+          ansible.builtin.pause:
+            prompt: "Wrong passphrase. Enter LUKS passphrase again (or Ctrl+C to abort)"
+            echo: false
+          register: luks_retry
+
+        - name: Abort if no passphrase provided on retry
+          ansible.builtin.fail:
+            msg: "Aborted - no passphrase provided"
+          when: luks_retry.user_input | length == 0
+
+        - name: Retry unlock with new passphrase
+          ansible.builtin.shell: |
+            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 root@{{ inventory_hostname }} 'printf "%s" "{{ luks_retry.user_input }}" | cryptroot-unlock'
+          delegate_to: localhost
+          no_log: true
+
+    - name: Wait for SSH on standard port after unlock
+      ansible.builtin.wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 22
+        delay: 1
+        timeout: 120
+      delegate_to: localhost
+
+    - name: Wait for website to be up
+      when: healthcheck_url is defined
+      block:
+        - name: Check healthcheck URL
+          ansible.builtin.uri:
+            url: "{{ healthcheck_url }}"
+            status_code: 200
+            timeout: 10
+          register: healthcheck_result
+          until: healthcheck_result.status == 200
+          retries: 30
+          delay: 5
+          delegate_to: localhost
+          failed_when: false
+
+        - name: Report healthcheck result
+          ansible.builtin.debug:
+            msg: "{{ 'SUCCESS: ' + healthcheck_url + ' is up' if healthcheck_result is succeeded else 'WARNING: ' + healthcheck_url + ' is not responding after 30 attempts' }}"

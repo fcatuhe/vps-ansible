@@ -1,0 +1,25 @@
+---
+- name: Install zram-tools
+  apt:
+    name: zram-tools
+    state: present
+    update_cache: true
+
+- name: Configure zram swap
+  copy:
+    dest: /etc/default/zramswap
+    content: |
+      # Compression algorithm (zstd = best ratio, lz4 = fastest)
+      ALGO={{ zram_algorithm }}
+      # Percentage of RAM to use as zram swap
+      PERCENT={{ zram_percent }}
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart zramswap
+
+- name: Enable and start zramswap
+  systemd:
+    name: zramswap
+    enabled: true
+    state: started

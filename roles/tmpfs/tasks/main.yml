@@ -1,0 +1,14 @@
+---
+# Disable tmpfs on /tmp to avoid ENOSPC on RAM-constrained servers.
+# /tmp will use the root filesystem instead.
+
+- name: Mask tmp.mount to disable tmpfs on /tmp
+  systemd:
+    name: tmp.mount
+    masked: true
+  register: tmp_mount_masked
+
+- name: Flag reboot needed if tmp.mount was just masked
+  set_fact:
+    reboot_needed: true
+  when: tmp_mount_masked.changed
