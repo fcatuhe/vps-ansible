@@ -67,14 +67,51 @@ ansible-playbook playbook.yml
 
 ## Usage as a git submodule
 
-This repo can be used as a shared infrastructure submodule across multiple projects:
+Add the submodule inside `.infra/vps-ansible/` of your project:
 
 ```bash
 cd your-project
-git submodule add https://github.com/fcatuhe/vps-ansible.git .infra/vps-ansible
+mkdir -p .infra/vps-ansible
+git submodule add https://github.com/fcatuhe/vps-ansible.git .infra/vps-ansible/vps-ansible
 ```
 
-Then create a project-level `playbook.yml` in `.infra/` that references the shared roles:
+This creates the following structure:
+
+```
+.infra/
+  vps-ansible/
+    vps-ansible/          # ← submodule (this repo)
+    ansible.cfg           # ← symlink (see below)
+    inventory             # ← git-ignored
+    playbook.yml          # ← project-specific
+    .gitignore
+```
+
+### Setup
+
+Create the required files in `.infra/vps-ansible/`:
+
+**1. Symlink `ansible.cfg`** — Ansible only reads config from the current directory, so symlink to the submodule's:
+
+```bash
+cd .infra/vps-ansible
+ln -s vps-ansible/ansible.cfg ansible.cfg
+```
+
+**2. Create `.gitignore`** to exclude the inventory file:
+
+```
+inventory
+```
+
+**3. Create `inventory`** with your server IP:
+
+```ini
+[webservers]
+your.server.ip.address
+```
+
+**4. Create `playbook.yml`** with project-specific vars and role selection:
 
 ```yaml
 ---
@@ -96,10 +133,13 @@ Then create a project-level `playbook.yml` in `.infra/` that references the shar
     - vps-ansible/roles/reboot_if_needed
 ```
 
-Project-level files (`.infra/`):
-- `playbook.yml` — role selection and vars (committed)
-- `ansible.cfg` — inventory path, defaults (committed)
-- `inventory` — server IPs (git-ignored)
+### Running
+
+```bash
+cd .infra/vps-ansible
+ansible-galaxy install -r vps-ansible/requirements.yml
+ansible-playbook playbook.yml
+```
 
 ## Configuration
 
