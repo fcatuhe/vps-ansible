@@ -30,6 +30,7 @@
       - curl
       - duf
       - fail2ban
+      - systemd-timesyncd
       - git
       - gnupg
       - htop
